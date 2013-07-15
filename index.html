@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>three.js webgl - geometry - cube</title>
+    <meta charset="utf-8">
+    <style>
+        body {
+            margin: 0px;
+            background-color: #000000;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+
+<script src="../../js/jquery.min.js"></script>
+<script src="../../three.js/build/three.min.js"></script>
+<script src="../../js/colors.min.js"></script>
+
+<script>
+
+    var lastUpdate = Date.now();
+    var totalTime = 0;
+
+    var camera, scene, renderer;
+    var mesh;
+
+
+    var scale = 500;
+    var numSamples = 1024;
+    var numBars = 128;
+    var spectrum = [[], []];
+    var angle = 0;
+    var maxPower = 0;
+    var bars = [[], []];
+
+    init();
+    animate();
+
+    function init() {
+
+        renderer = new THREE.WebGLRenderer();
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        document.body.appendChild( renderer.domElement );
+
+        //
+
+        camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 0.1, 100 );
+        camera.position = new THREE.Vector3(0, 2, 5);
+        camera.rotation = new THREE.Vector3(0, 0, 0);
+
+        scene = new THREE.Scene();
+        var geometry = new THREE.CubeGeometry( 1, 1, 1 );
+
+        for (var channel=0; channel<2; channel++) {
+            for (var i=0;i<numBars;i++) {
+                var d = -5 + Math.log(i+2) * 2;
+                var x = channel == 0 ? -d : d;
+
+                var material = new THREE.MeshBasicMaterial( {
+                    color: 0xffffff,
+                    blending: THREE.AdditiveBlending,
+                    transparent: true,
+                    depthTest: false
+                } );
+
+                var mesh = new THREE.Mesh( geometry, material );
+                mesh.position = new THREE.Vector3( x, 0, 0 );
+                scene.add(mesh);
+                bars[channel][i] = mesh;
+            }
+        }
+
+        window.addEventListener( 'resize', onWindowResize, false );
+
+    }
+
+    function onWindowResize() {
+
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+
+        renderer.setSize( window.innerWidth, window.innerHeight );
+
+    }
+
+    function animate() {
+
+        var now = Date.now();
+        var elapsed = (now - lastUpdate) * 0.001;
+        lastUpdate = now;
+        totalTime += elapsed;
+
+        requestAnimationFrame( animate );
+
+        //Source.GetSpectrumData(spectrum[0], 0, Window);
+        //Source.GetSpectrumData(spectrum[1], 1, Window);
+
+        for (var channel=0; channel<2; channel++) {
+            for (var i=0;i<numBars;i++) {
+
+                spectrum[channel][i] = Math.abs(Math.sin(i + totalTime)) * 0.01;
+
+                var width = Math.log(i+2) - Math.log(i+1);
+                var power = spectrum[channel][i];
+
+                if (power>0.0099999) angle += power * 50;
+                if (power>maxPower) {
+                    maxPower = power;
+                    console.log(maxPower);
+                }
+
+                var logPower = Math.log(power+1);
+
+                bars[channel][i].scale = new THREE.Vector3(width, logPower * scale, 2);
+                bars[channel][i].material.color.setHSL(i/numBars, 1, power * 10);
+            }
+        }
+
+        var quaternion = new THREE.Quaternion();
+        quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), angle);
+
+
+        var position = new THREE.Vector3(0,0,5);
+        position.applyQuaternion(quaternion);
+        camera.position = position;
+
+        camera.rotation.setEulerFromQuaternion(quaternion);
+
+        renderer.render( scene, camera );
+
+    }
+
+</script>
+
+</body>
+</html>
