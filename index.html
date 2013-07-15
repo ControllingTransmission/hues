@@ -16,6 +16,8 @@
 <script src="../../js/jquery.min.js"></script>
 <script src="../../three.js/build/three.min.js"></script>
 <script src="../../js/colors.min.js"></script>
+<script src="AudioContextMonkeyPatch.js"></script>
+<script src="Spectrum.js"></script>
 
 <script>
 
@@ -27,7 +29,6 @@
 
 
     var scale = 500;
-    var numSamples = 1024;
     var numBars = 128;
     var spectrum = [[], []];
     var angle = 0;
@@ -38,6 +39,9 @@
     animate();
 
     function init() {
+
+        Spectrum.setup();
+
 
         renderer = new THREE.WebGLRenderer();
         renderer.setSize( window.innerWidth, window.innerHeight );
@@ -86,6 +90,8 @@
 
     function animate() {
 
+        var bins = Spectrum.timeStep();
+
         var now = Date.now();
         var elapsed = (now - lastUpdate) * 0.001;
         lastUpdate = now;
@@ -93,18 +99,19 @@
 
         requestAnimationFrame( animate );
 
-        //Source.GetSpectrumData(spectrum[0], 0, Window);
-        //Source.GetSpectrumData(spectrum[1], 1, Window);
-
         for (var channel=0; channel<2; channel++) {
             for (var i=0;i<numBars;i++) {
 
-                spectrum[channel][i] = Math.abs(Math.sin(i + totalTime)) * 0.01;
+                if (bins == undefined) {
+                    spectrum[channel][i] = Math.abs(Math.sin(i + totalTime)) * 0.01;
+                } else {
+                    spectrum[channel][i] = Math.pow(bins[i*5],2) / 2000000;
+                }
 
                 var width = Math.log(i+2) - Math.log(i+1);
                 var power = spectrum[channel][i];
 
-                if (power>0.0099999) angle += power * 50;
+                if (power>0.1) angle += power * 50;
                 if (power>maxPower) {
                     maxPower = power;
                     console.log(maxPower);
